@@ -1,0 +1,51 @@
+{
+  "realm": "demo",
+  "enabled": true,
+  "displayName": "Demo Realm",
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "demo-app",
+      "name": "Demo Spring Boot App",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "demo-secret",
+      "redirectUris": ["http://localhost:8081/*"],
+      "webOrigins": ["http://localhost:8081"],
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      {"name": "USER", "description": "Standard application user"},
+      {"name": "ADMIN", "description": "Administrator with full access"}
+    ]
+  },
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {"type": "password", "value": "password", "temporary": false}
+      ],
+      "realmRoles": ["USER"]
+    },
+    {
+      "username": "adminuser",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {"type": "password", "value": "password", "temporary": false}
+      ],
+      "realmRoles": ["USER", "ADMIN"]
+    }
+  ]
+}
