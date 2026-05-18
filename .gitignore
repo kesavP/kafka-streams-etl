@@ -1,0 +1,37 @@
+# Compiled Java classes
+*.class
+
+# Maven build directory
+target/
+
+# IDE Settings (IntelliJ, Eclipse, VS Code)
+.idea/
+*.iml
+*.iws
+*.ipr
+.settings/
+.classpath
+.project
+.factorypath
+.vscode/
+
+# Spring Boot Specifics
+.sts4-cache
+.springBeans
+
+# Logs and Temp files
+*.log
+logs/
+tmp/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Environment and sensitive data
+.env
+*.properties.local
+*.yml.local
+
+# Optional: Maven Wrapper (Keep the wrapper, ignore the local download)
+#!.mvn/wrapper/maven-wrapper.jar
