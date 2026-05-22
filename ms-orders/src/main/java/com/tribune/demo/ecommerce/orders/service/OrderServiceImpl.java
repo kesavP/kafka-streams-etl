@@ -1,20 +1,23 @@
 package com.tribune.demo.ecommerce.orders.service;
 
 
-import com.tribune.demo.ecommerce.domain.Order;
-import com.tribune.demo.ecommerce.domain.OrderSource;
-import com.tribune.demo.ecommerce.domain.OrderStatus;
-import com.tribune.demo.ecommerce.domain.Topics;
+import com.tribune.demo.ecommerce.domain.*;
+import com.tribune.demo.ecommerce.domain.avro.order.OrderKey;
+import com.tribune.demo.ecommerce.domain.avro.order.OrderValue;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-public record OrderServiceImpl(KafkaTemplate<Long, Order> kafkaTemplate) implements OrderService {
+public record OrderServiceImpl(KafkaTemplate<Long, OrderValue> kafkaTemplate) implements OrderService {
 
 
     @Override
@@ -48,17 +51,22 @@ public record OrderServiceImpl(KafkaTemplate<Long, Order> kafkaTemplate) impleme
     }
 
     @Override
-    public Order createOrder(Order order) {
+    public OrderAvro createOrder(OrderAvro order) {
         try {
             // Generate UUID as order ID (better than AtomicLong for distributed systems)
             long orderId = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
             order.setId(orderId);
-            order.setStatus(OrderStatus.NEW);
+//            order.setStatus(OrderStatus.NEW);
 
-            log.info("Creating order with ID: {} for customer: {}", orderId, order.getCustomerId());
+            log.info("Creating order with ID: {} for customer: {}", orderId, order.getTitle());
+            OrderKey key = OrderKey.newBuilder().setId(orderId).build();
+            OrderValue value = OrderValue.newBuilder().setId(orderId).setTitle(order.getTitle()).setPrice(1000f).build();
+
+            final ProducerRecord<Long, OrderValue> producerRecord =
+                    new ProducerRecord<>(Topics.ORDERS, orderId, value);
 
             // Send to Kafka with timeout
-            kafkaTemplate.send(Topics.ORDERS, order.getId(), order)
+            kafkaTemplate.send(producerRecord)
                     .get(10, TimeUnit.SECONDS);  // Add timeout to prevent hanging
 
             log.info("Order successfully sent to Kafka: {}", order);

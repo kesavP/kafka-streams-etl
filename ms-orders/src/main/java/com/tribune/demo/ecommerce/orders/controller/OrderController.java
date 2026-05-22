@@ -1,6 +1,7 @@
 package com.tribune.demo.ecommerce.orders.controller;
 
 import com.tribune.demo.ecommerce.domain.Order;
+import com.tribune.demo.ecommerce.domain.OrderAvro;
 import com.tribune.demo.ecommerce.domain.Topics;
 import com.tribune.demo.ecommerce.orders.error.OrderNotFoundException;
 import jakarta.validation.Valid;
@@ -27,11 +28,11 @@ public record OrderController(OrderService orderService,
 
 
     @PostMapping
-    public ResponseEntity<Order> create(@Valid @RequestBody Order order) {
+    public ResponseEntity<OrderAvro> create(@Valid @RequestBody OrderAvro order) {
         try {
-            log.info("Received order creation request for customer: {}", order.getCustomerId());
+            log.info("Received order creation request for title: {}", order.getTitle());
 
-            Order createdOrder = orderService.createOrder(order);
+            OrderAvro createdOrder = orderService.createOrder(order);
 
             log.info("Order created successfully with ID: {}", createdOrder.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);

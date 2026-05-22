@@ -2,6 +2,7 @@ package com.tribune.demo.ecommerce.orders.service;
 
 
 import com.tribune.demo.ecommerce.domain.Order;
+import com.tribune.demo.ecommerce.domain.OrderAvro;
 
 public interface OrderService {
 
@@ -12,5 +13,5 @@ public interface OrderService {
      * @param order the order to create
      * @return the created order
      */
-    Order createOrder(Order order);
+    OrderAvro createOrder(OrderAvro order);
 }

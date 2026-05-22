@@ -1,19 +1,18 @@
 package com.tribune.demo.ecommerce.orders.config;
 
 
-import com.tribune.demo.ecommerce.domain.KafkaIds;
-import com.tribune.demo.ecommerce.domain.Order;
 import com.tribune.demo.ecommerce.domain.Topics;
+import com.tribune.demo.ecommerce.domain.avro.order.OrderKey;
+import com.tribune.demo.ecommerce.domain.avro.order.OrderValue;
 import com.tribune.demo.ecommerce.orders.service.OrderService;
-import com.tribune.demo.ecommerce.utils.OrderJsonSerde;
+import com.tribune.demo.ecommerce.utils.OrderAvroValueSerde;
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
-import org.apache.kafka.streams.state.Stores;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,42 +42,42 @@ public class KafkaStreamConfig {
         props.put(APPLICATION_ID_CONFIG, "ms-orders-streams-app");
         props.put(BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.LongSerde.class);
-        props.put(DEFAULT_VALUE_SERDE_CLASS_CONFIG, OrderJsonSerde.class);
+        props.put(DEFAULT_VALUE_SERDE_CLASS_CONFIG, OrderAvroValueSerde.class);
         props.put(NUM_STREAM_THREADS_CONFIG, 3);
+        props.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8000");
 
         return new KafkaStreamsConfiguration(props);
     }
 
     //this is the one that will get results from other topics to check
     @Bean
-    public KStream<Long, Order> stream(StreamsBuilder builder) {
-        //provides serialization and deserialization in JSON format
-        // Using custom OrderJsonSerde from commons module
+    public KStream<Long, OrderValue> stream(StreamsBuilder builder) {
+        Map<String, Object> serdeConfig = new HashMap<>();
+//        serdeConfig.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8000");
+//        serdeConfig.put("specific.avro.reader", true);
 
         Serde<Long> keySerde = Serdes.Long();
-        Serde<Order> valueSerde = new OrderJsonSerde();
+        Serde<OrderValue> valueSerde = new OrderAvroValueSerde();
+//        keySerde.configure(serdeConfig, true);
+//        valueSerde.configure(serdeConfig, false);
 
-        // Kafka stream => it's a record stream that represents key & value pairs
-        // key and value serdes means Key & value serializers & deserializers
-        //of course, the key in our case is the order id
-        KStream<Long, Order> paymentStream = builder
-                .stream(Topics.PAYMENTS, Consumed.with(keySerde, valueSerde))//Consumed With == passing some parameters for configuring the generated stream
-                .peek((key, value) -> log.info("payments topic payload {}",String.valueOf(value)));
-        KStream<Long, Order> stockStream = builder
+        KStream<Long, OrderValue> paymentStream = builder
+                .stream(Topics.PAYMENTS, Consumed.with(keySerde, valueSerde))
+                .peek((key, value) -> log.info("payments topic payload {}", String.valueOf(value)));
+        KStream<Long, OrderValue> stockStream = builder
                 .stream(Topics.STOCK, Consumed.with(keySerde, valueSerde))
-                .peek((key, value) -> log.info("stock topic payload {}",String.valueOf(value)));
+                .peek((key, value) -> log.info("stock topic payload {}", String.valueOf(value)));
 
-        //join records from both tables
-        paymentStream.join(
+        KStream<Long, OrderValue> joinedStream = paymentStream.join(
                         stockStream,
-                        orderService::confirm,//the value joiner == the one responsible for joining the two records
-                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)), // timestamps of matched records must fall within this window of time
-                        StreamJoined.with(keySerde, valueSerde, valueSerde)//the key must be the same, 1st stream serde, 2nd stream serde
+                        (payment, stock) -> payment,
+                        JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                        StreamJoined.with(keySerde, valueSerde, valueSerde)
                 )
-                .peek((k, v) -> log.info("Kafka stream match: key[{}],value[{}]", k, v))
-                .to(ORDERS);
+                .peek((k, v) -> log.info("Kafka stream match: key[{}],value[{}]", k, v));
 
-        return paymentStream;
+        joinedStream.to(ORDERS, Produced.with(keySerde, valueSerde));
+        return joinedStream;
     }
 
     /**
@@ -86,20 +85,20 @@ public class KafkaStreamConfig {
      * This KTable will be used to store all the Orders
      ***/
 
-    @Bean
-    public KTable<Long, Order> table(StreamsBuilder builder) {
+//     @Bean
+//     public KTable<Long, Order> table(StreamsBuilder builder) {
 
-        KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(KafkaIds.ORDERS);
+//         KeyValueBytesStoreSupplier store = Stores.persistentKeyValueStore(KafkaIds.ORDERS);
 
-        Serde<Long> keySerde = Serdes.Long();
-        Serde<Order> valueSerde = new OrderJsonSerde();
+//         Serde<Long> keySerde = Serdes.Long();
+//         Serde<Order> valueSerde = new OrderJsonSerde();
 
-        KStream<Long, Order> stream = builder
-                .stream(ORDERS, Consumed.with(keySerde, valueSerde))
-                .peek((k, v) -> log.info("Kafka persistence table: key[{}],value[{}]", k, v));
+//         KStream<Long, Order> stream = builder
+//                 .stream(ORDERS, Consumed.with(keySerde, valueSerde))
+//                 .peek((k, v) -> log.info("Kafka persistence table: key[{}],value[{}]", k, v));
 
-        return stream.toTable(Materialized.<Long, Order>as(store)
-                .withKeySerde(keySerde)
-                .withValueSerde(valueSerde));
-    }
+//         return stream.toTable(Materialized.<Long, Order>as(store)
+//                 .withKeySerde(keySerde)
+//                 .withValueSerde(valueSerde));
+//     }
 }

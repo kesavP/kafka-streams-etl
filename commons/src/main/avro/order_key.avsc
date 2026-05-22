@@ -1,0 +1,11 @@
+{
+  "namespace": "com.tribune.demo.ecommerce.domain.avro.order",
+  "type": "record",
+  "name": "OrderKey",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long"
+    }
+  ]
+}

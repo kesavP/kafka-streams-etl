@@ -36,7 +36,7 @@ public class Order {
         return "Order{" +
                 "id=" + id +
                 ", customerId=" + customerId +
-                ", productId=" + productId +
+                    ", productId=" + productId +
                 ", productCount=" + productCount +
                 ", price=" + price +
                 ", status=" + status +

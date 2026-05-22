@@ -1,13 +1,13 @@
 package com.tribune.demo.ecommerce.orders.config;
 
-import com.tribune.demo.ecommerce.domain.Order;
-import com.tribune.demo.ecommerce.utils.OrderJsonSerializer;
+import com.tribune.demo.ecommerce.domain.avro.order.OrderValue;
+import com.tribune.demo.ecommerce.utils.OrderAvroDeserializer;
+import com.tribune.demo.ecommerce.utils.OrderAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.LongSerializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,13 +33,13 @@ import java.util.Map;
 public class KafkaConfig {
 
     @Bean
-    public ConsumerFactory<Long, Order> consumerFactory(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
+    public ConsumerFactory<Long, OrderValue> consumerFactory(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
         log.info("Configuring consumer factory for bootstrap servers: {}", bootstrapServers);
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "ms-orders");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, OrderAvroDeserializer.class);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
@@ -47,22 +47,22 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaListenerContainerFactory<ConcurrentMessageListenerContainer<Long, Order>> kafkaListenerContainerFactory(
-            ConsumerFactory<Long, Order> consumerFactory) {
+    public KafkaListenerContainerFactory<ConcurrentMessageListenerContainer<Long, OrderValue>> kafkaListenerContainerFactory(
+            ConsumerFactory<Long, OrderValue> consumerFactory) {
         log.info("Configuring kafka listener container factory");
-        ConcurrentKafkaListenerContainerFactory<Long, Order> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        ConcurrentKafkaListenerContainerFactory<Long, OrderValue> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         return factory;
     }
 
     @Bean
-    public ProducerFactory<Long, Order> producerFactory(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
+    public ProducerFactory<Long, OrderValue> producerFactory(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers) {
         log.info("Configuring producer factory for bootstrap servers: {}", bootstrapServers);
         Map<String, Object> configProps = new HashMap<>();
 
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
-        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, OrderJsonSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, OrderAvroSerializer.class);
         configProps.put(ProducerConfig.ACKS_CONFIG, "all");
         configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
         configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy");
@@ -83,7 +83,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<Long, Order> kafkaTemplate(ProducerFactory<Long, Order> producerFactory) {
+    public KafkaTemplate<Long, OrderValue> kafkaTemplate(ProducerFactory<Long, OrderValue> producerFactory) {
         log.info("Configuring kafka template");
         return new KafkaTemplate<>(producerFactory);
     }

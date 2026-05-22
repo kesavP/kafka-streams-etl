@@ -1,0 +1,19 @@
+{
+  "namespace": "com.tribune.demo.ecommerce.domain.avro.order",
+  "type": "record",
+  "name": "OrderValue",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long"
+    },
+    {
+      "name": "title",
+      "type": "string"
+    },
+    {
+      "name": "price",
+      "type": "double"
+    }
+  ]
+}
